@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background: #f4f4f9;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: 600;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            background: #218838;
+        }
+
+        .stats-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 150px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #007bff;
+        }
+
+        .stat-card h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 1rem;
+        }
+
+        .stat-card p {
+            margin: 8px 0;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        #sensorChart {
+            width: 100% !important;
+            height: auto !important;
+            max-height: 350px;
+            margin-bottom: 20px;
+        }
+
+        #temp-high,
+        #temp-low,
+        #temp-avg {
+            color: #ff6384;
+        }
+
+        #hum-high,
+        #hum-low,
+        #hum-avg {
+            color: #36a2eb;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            body {
+                padding: 8px;
+            }
+
+            .container {
+                padding: 12px;
+                border-radius: 6px;
+            }
+
+            h2 {
+                font-size: 1.3rem;
+                margin-bottom: 15px;
+            }
+
+            .stats-container {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .stat-card {
+                flex: 1 1 auto;
+                min-width: unset;
+            }
+
+            .stat-card h3 {
+                font-size: 0.95rem;
+            }
+
+            .stat-card p {
+                font-size: 0.85rem;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            th,
+            td {
+                padding: 6px;
+            }
+
+            .btn {
+                width: 100%;
+                padding: 12px;
+                font-size: 1rem;
+            }
+
+            #sensorChart {
+                max-height: 300px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 6px;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            h2 {
+                font-size: 1.1rem;
+                margin-bottom: 10px;
+            }
+
+            .stats-container {
+                gap: 10px;
+            }
+
+            .stat-card {
+                padding: 12px;
+            }
+
+            .stat-card h3 {
+                font-size: 0.9rem;
+                margin-bottom: 8px;
+            }
+
+            .stat-card p {
+                font-size: 0.8rem;
+                margin: 5px 0;
+            }
+
+            table {
+                font-size: 0.75rem;
+            }
+
+            th,
+            td {
+                padding: 5px;
+            }
+
+            .btn {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+
+            #sensorChart {
+                max-height: 320px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Temp & Humidity Dashboard</h2>
+        <a href="sensor_data.csv" class="btn" download>Download CSV</a>
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>Temperature</h3>
+                <p>High: <span id="temp-high">--</span>°C</p>
+                <p>Low: <span id="temp-low">--</span>°C</p>
+                <p>Avg: <span id="temp-avg">--</span>°C</p>
+            </div>
+            <div class="stat-card">
+                <h3>Humidity</h3>
+                <p>High: <span id="hum-high">--</span>%</p>
+                <p>Low: <span id="hum-low">--</span>%</p>
+                <p>Avg: <span id="hum-avg">--</span>%</p>
+            </div>
+        </div>
+        <canvas id="sensorChart" width="400" height="200"></canvas>
+
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Temp (°C)</th>
+                    <th>Humidity (%)</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        async function fetchData() {
+            const response = await fetch('sensor_data.csv?t=' + Date.now());
+            const csvData = await response.text();
+
+            Papa.parse(csvData, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function (results) {
+                    processData(results.data);
+                }
+            });
+        }
+
+        function processData(data) {
+            const tableBody = document.querySelector('#dataTable tbody');
+            tableBody.innerHTML = "";
+
+            const chartDataTemp = [];
+            const chartDataHum = [];
+
+            let tempSum = 0, humSum = 0, count = 0;
+            let maxTemp = -Infinity, minTemp = Infinity;
+            let maxHum = -Infinity, minHum = Infinity;
+
+            // Define the cutoff (24 hours ago)
+            const now = new Date();
+            const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+
+            // Filter and Process Data
+            data.forEach(row => {
+                if (!row.Timestamp) return;
+
+                // Convert CSV UTC time to local JS Date object
+                const localDate = new Date(row.Timestamp);
+
+                // Only process if within the last 24 hours
+                if (localDate.getTime() > twentyFourHoursAgo) {
+                    const t = parseFloat(row.Temperature);
+                    const h = parseFloat(row.Humidity);
+                    // Chart.js time scale likes {x: Date, y: Value} objects
+                    chartDataTemp.push({ x: localDate, y: row.Temperature });
+                    chartDataHum.push({ x: localDate, y: row.Humidity });
+
+                    // Stats Calculations
+                    tempSum += t;
+                    humSum += h;
+                    count++;
+
+                    if (t > maxTemp) maxTemp = t;
+                    if (t < minTemp) minTemp = t;
+                    if (h > maxHum) maxHum = h;
+                    if (h < minHum) minHum = h;
+
+                    // Add to Table
+                    const tr = `<tr>
+                <td>${localDate.toLocaleString('en-GB')}</td>
+                <td>${row.Temperature}°C</td>
+                <td>${row.Humidity}%</td>
+            </tr>`;
+                    tableBody.insertAdjacentHTML('afterbegin', tr);
+                }
+            });
+
+            // Update the Summary Box
+            if (count > 0) {
+                document.getElementById('temp-high').innerText = maxTemp.toFixed(1);
+                document.getElementById('temp-low').innerText = minTemp.toFixed(1);
+                document.getElementById('temp-avg').innerText = (tempSum / count).toFixed(1);
+
+                document.getElementById('hum-high').innerText = maxHum.toFixed(1);
+                document.getElementById('hum-low').innerText = minHum.toFixed(1);
+                document.getElementById('hum-avg').innerText = (humSum / count).toFixed(1);
+            }
+
+            if (window.myChart) window.myChart.destroy();
+
+            window.myChart = new Chart(document.getElementById('sensorChart'), {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Temp (°C)',
+                            data: chartDataTemp,
+                            borderColor: '#ff6384',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            spanGaps: false // This ensures gaps appear if data is missing
+                        },
+                        {
+                            label: 'Humidity (%)',
+                            data: chartDataHum,
+                            borderColor: '#36a2eb',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            spanGaps: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'time', // CRITICAL: This enables the actual passage of time
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'HH:mm'
+                                }
+                            },
+                            title: { display: true, text: 'Local Time' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Value' }
+                        }
+                    }
+                }
+            });
+        }
+
+        fetchData();
+        setInterval(fetchData, 300000);
+    </script>
+
+</body>
+
+</html>

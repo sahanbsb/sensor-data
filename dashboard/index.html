@@ -14,23 +14,28 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Courier New', monospace;
             margin: 0;
             padding: 10px;
-            background: #f4f4f9;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
+            color: #e0e0e0;
+            min-height: 100vh;
         }
 
         .container {
             max-width: 900px;
             margin: auto;
-            background: white;
+            background: rgba(26, 26, 46, 0.9);
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.5);
         }
 
         h2 {
             margin-top: 0;
             font-size: 1.5rem;
+            color: #00ffff;
+            text-align: center;
         }
 
         table {
@@ -39,26 +44,29 @@
             margin-top: 20px;
             font-size: 0.9rem;
             overflow-x: auto;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            overflow: hidden;
         }
 
         th,
         td {
-            border: 1px solid #ddd;
+            border: 1px solid rgba(0, 255, 255, 0.3);
             padding: 8px;
             text-align: left;
         }
 
         th {
-            background-color: #007bff;
-            color: white;
+            background: linear-gradient(90deg, #00ffff, #0080ff);
+            color: #000;
             font-weight: 600;
         }
 
         .btn {
             display: inline-block;
             padding: 10px 15px;
-            background: #28a745;
-            color: white;
+            background: #008000;
+            color: #000;
             text-decoration: none;
             border-radius: 5px;
             margin-bottom: 20px;
@@ -69,7 +77,7 @@
         }
 
         .btn:active {
-            background: #218838;
+            background: #008000;
         }
 
         .stats-container {
@@ -82,17 +90,16 @@
         .stat-card {
             flex: 1;
             min-width: 150px;
-            background: #fff;
+            background: rgba(0, 0, 0, 0.7);
             padding: 15px;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid #007bff;
+            border: 1px solid rgba(255, 0, 255, 0.5);
         }
 
         .stat-card h3 {
             margin-top: 0;
             margin-bottom: 10px;
-            color: #555;
+            color: #ff00ff;
             font-size: 1rem;
         }
 
@@ -100,13 +107,17 @@
             margin: 8px 0;
             font-weight: bold;
             font-size: 0.9rem;
+            color: #e0e0e0;
         }
 
-        #sensorChart {
+        #tempChart,
+        #humChart {
             width: 100% !important;
             height: auto !important;
             max-height: 350px;
             margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
         }
 
         #temp-high,
@@ -119,6 +130,23 @@
         #hum-low,
         #hum-avg {
             color: #36a2eb;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .status-live {
+            background-color: #00ff00;
+        }
+
+        .status-offline {
+            background-color: #ff0000;
         }
 
         /* Mobile Responsiveness */
@@ -170,7 +198,8 @@
                 font-size: 1rem;
             }
 
-            #sensorChart {
+            #tempChart,
+            #humChart {
                 max-height: 300px;
             }
         }
@@ -221,7 +250,8 @@
                 font-size: 0.9rem;
             }
 
-            #sensorChart {
+            #tempChart,
+            #humChart {
                 max-height: 320px;
             }
         }
@@ -230,7 +260,7 @@
 
 <body>
     <div class="container">
-        <h2>Temp & Humidity Dashboard</h2>
+        <h2>Sensor Dashboard</h2>
         <a href="sensor_data.csv" class="btn" download>Download CSV</a>
         <div class="stats-container">
             <div class="stat-card">
@@ -245,8 +275,15 @@
                 <p>Low: <span id="hum-low">--</span>%</p>
                 <p>Avg: <span id="hum-avg">--</span>%</p>
             </div>
+            <div class="stat-card">
+                <h3><span class="status-indicator status-offline" id="status-circle"></span>Latest Data</h3>
+                <p>Temp: <span id="latest-temp">--</span>°C</p>
+                <p>RH: <span id="latest-rh">--</span>%</p>
+                <p>Time: <span id="latest-time">--</span></p>
+            </div>
         </div>
-        <canvas id="sensorChart" width="400" height="200"></canvas>
+        <canvas id="tempChart" width="400" height="200"></canvas>
+        <canvas id="humChart" width="400" height="200"></canvas>
 
         <table id="dataTable">
             <thead>
@@ -285,6 +322,9 @@
             let tempSum = 0, humSum = 0, count = 0;
             let maxTemp = -Infinity, minTemp = Infinity;
             let maxHum = -Infinity, minHum = Infinity;
+            let latestTimestamp = null;
+            let latestTemp = null;
+            let latestHum = null;
 
             // Define the cutoff (24 hours ago)
             const now = new Date();
@@ -315,6 +355,13 @@
                     if (h > maxHum) maxHum = h;
                     if (h < minHum) minHum = h;
 
+                    // Track latest data point
+                    if (latestTimestamp === null || localDate.getTime() > latestTimestamp.getTime()) {
+                        latestTimestamp = localDate;
+                        latestTemp = t;
+                        latestHum = h;
+                    }
+
                     // Add to Table
                     const tr = `<tr>
                 <td>${localDate.toLocaleString('en-GB')}</td>
@@ -334,53 +381,137 @@
                 document.getElementById('hum-high').innerText = maxHum.toFixed(1);
                 document.getElementById('hum-low').innerText = minHum.toFixed(1);
                 document.getElementById('hum-avg').innerText = (humSum / count).toFixed(1);
+
+                // Update Latest Data Box
+                if (latestTimestamp) {
+                    document.getElementById('latest-temp').innerText = latestTemp.toFixed(1);
+                    document.getElementById('latest-rh').innerText = latestHum.toFixed(1);
+                    document.getElementById('latest-time').innerText = latestTimestamp.toLocaleString('en-GB');
+                    
+                    // Check if data is live (within 10 minutes)
+                    const tenMinutesAgo = now.getTime() - (10 * 60 * 1000);
+                    const isLive = latestTimestamp.getTime() > tenMinutesAgo;
+                    
+                    const statusCircle = document.getElementById('status-circle');
+                    statusCircle.classList.remove('status-live', 'status-offline');
+                    statusCircle.classList.add(isLive ? 'status-live' : 'status-offline');
+                }
             }
 
-            if (window.myChart) window.myChart.destroy();
+            if (window.tempChart && typeof window.tempChart.destroy === 'function') window.tempChart.destroy();
+            if (window.humChart && typeof window.humChart.destroy === 'function') window.humChart.destroy();
 
-            window.myChart = new Chart(document.getElementById('sensorChart'), {
-                type: 'line',
-                data: {
-                    datasets: [
-                        {
-                            label: 'Temp (°C)',
-                            data: chartDataTemp,
-                            borderColor: '#ff6384',
-                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                            fill: true,
-                            tension: 0.3,
-                            spanGaps: false // This ensures gaps appear if data is missing
+            try {
+                window.tempChart = new Chart(document.getElementById('tempChart'), {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Temp (°C)',
+                                data: chartDataTemp,
+                                borderColor: '#ff6384',
+                                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                fill: false,
+                                borderWidth: 1.5,
+                                pointRadius: 0,
+                                pointHoverRadius: 6,
+                                tension: 0.3,
+                                spanGaps: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
                         },
-                        {
-                            label: 'Humidity (%)',
-                            data: chartDataHum,
-                            borderColor: '#36a2eb',
-                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                            fill: true,
-                            tension: 0.3,
-                            spanGaps: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        x: {
-                            type: 'time', // CRITICAL: This enables the actual passage of time
-                            time: {
-                                unit: 'hour',
-                                displayFormats: {
-                                    hour: 'HH:mm'
-                                }
+                        hover: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'hour',
+                                    displayFormats: {
+                                        hour: 'HH:mm'
+                                    }
+                                },
+                                title: { display: true, text: 'Local Time' }
                             },
-                            title: { display: true, text: 'Local Time' }
-                        },
-                        y: {
-                            title: { display: true, text: 'Value' }
+                            y: {
+                                title: { display: true, text: 'Temperature (°C)' }
+                            }
                         }
                     }
-                }
-            });
+                });
+            } catch (error) {
+                console.error('Error creating temperature chart:', error);
+            }
+
+            try {
+                window.humChart = new Chart(document.getElementById('humChart'), {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Humidity (%)',
+                                data: chartDataHum,
+                                borderColor: '#36a2eb',
+                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                fill: false,
+                                borderWidth: 1.5,
+                                pointRadius: 0,
+                                pointHoverRadius: 6,
+                                tension: 0.3,
+                                spanGaps: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        hover: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'hour',
+                                    displayFormats: {
+                                        hour: 'HH:mm'
+                                    }
+                                },
+                                title: { display: true, text: 'Local Time' }
+                            },
+                            y: {
+                                title: { display: true, text: 'Humidity (%)' }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error creating humidity chart:', error);
+            }
         }
 
         fetchData();

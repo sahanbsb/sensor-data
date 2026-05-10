@@ -99,7 +99,6 @@ function processData(data) {
     }
 
     if (window.tempChart && typeof window.tempChart.destroy === 'function') window.tempChart.destroy();
-    if (window.humChart && typeof window.humChart.destroy === 'function') window.humChart.destroy();
 
     try {
         window.tempChart = new Chart(document.getElementById('tempChart'), {
@@ -116,52 +115,9 @@ function processData(data) {
                         pointRadius: 0,
                         pointHoverRadius: 6,
                         tension: 0.3,
-                        spanGaps: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                },
-                hover: {
-                    mode: 'index',
-                    intersect: false
-                },
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'hour',
-                            displayFormats: {
-                                hour: 'HH:mm'
-                            }
-                        },
-                        title: { display: true, text: 'Local Time' }
+                        spanGaps: false,
+                        yAxisID: 'y'
                     },
-                    y: {
-                        title: { display: true, text: 'Temperature (°C)' }
-                    }
-                }
-            }
-        });
-    } catch (error) {
-        console.error('Error creating temperature chart:', error);
-    }
-
-    try {
-        window.humChart = new Chart(document.getElementById('humChart'), {
-            type: 'line',
-            data: {
-                datasets: [
                     {
                         label: 'Humidity (%)',
                         data: chartDataHum,
@@ -172,7 +128,8 @@ function processData(data) {
                         pointRadius: 0,
                         pointHoverRadius: 6,
                         tension: 0.3,
-                        spanGaps: false
+                        spanGaps: false,
+                        yAxisID: 'y1'
                     }
                 ]
             },
@@ -204,13 +161,31 @@ function processData(data) {
                         title: { display: true, text: 'Local Time' }
                     },
                     y: {
-                        title: { display: true, text: 'Humidity (%)' }
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'Temperature (°C)' },
+                        ticks: {
+                            color: '#ff6384'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: 'Humidity (%)' },
+                        ticks: {
+                            color: '#36a2eb'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
                     }
                 }
             }
         });
     } catch (error) {
-        console.error('Error creating humidity chart:', error);
+        console.error('Error creating combined chart:', error);
     }
 }
 
